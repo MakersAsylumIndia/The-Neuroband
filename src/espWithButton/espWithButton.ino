@@ -6,11 +6,12 @@
 
 
 // PINS
-const int LEDPin = 2;
-// Sensor should be connected SDA to A4 and SCL to A5
+const int LEDPin = 15;
+const int buttonPin = 34;
 
 // Variables
-
+//red red brown
+bool isPulsing;
 MAX30105 particleSensor;
 
 // Sensor Shit
@@ -24,24 +25,33 @@ int avgBpm;
 
 int bpmThreshold = 80;
 
-void setupHeartRateSensor() {
-  Serial.println("Initializing...");
+#define SDA_PIN 21           // SDA pin for DOIT ESP32 DEVKIT V1
+#define SCL_PIN 22           // SCL pin for DOIT ESP32 DEVKIT V1
 
-  // Initialize sensor
-  if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) //Use default I2C port, 400kHz speed
-  {
-    Serial.println("MAX30105 was not found. Please check wiring/power. ");
+int value=1;
+int oldVal=1;
+
+void setupHeartRateSensor() {
+  Wire.begin(SDA_PIN, SCL_PIN);
+  Wire.setClock(100000);
+
+  Serial.println("Initializing MAX30102...");
+  if (!particleSensor.begin(Wire, I2C_SPEED_STANDARD)) {
+    Serial.println("MAX30102 not found. Please check wiring.");
     while (1);
   }
-  Serial.println("Place your index finger on the sensor with steady pressure.");
 
-  particleSensor.setup(); //Configure sensor with default settings
-  particleSensor.setPulseAmplitudeRed(0x0A); //Turn Red LED to low to indicate sensor is running
-  particleSensor.setPulseAmplitudeGreen(0); //Turn off Green LED
+  particleSensor.setup();
+  particleSensor.setPulseAmplitudeRed(0x2A);
+  particleSensor.setPulseAmplitudeGreen(0); // Green not used
 }
 
 void setup() {
   Serial.begin(115200);
+
+  pinMode(buttonPin, INPUT_PULLUP);
+  value = digitalRead(buttonPin);
+  oldVal = value;
 
   setupHeartRateSensor();
 
@@ -80,6 +90,11 @@ void updateHeartRateSensor() {
 
 }
 
+void buttonPressed() {
+  Serial.println("Buttoned!");
+}
+
+
 void loop() {
   updateHeartRateSensor();
 
@@ -88,5 +103,11 @@ void loop() {
     digitalWrite(LEDPin, HIGH);
   }
   else digitalWrite(LEDPin, LOW);
+
+  value = digitalRead(buttonPin);
+  if (value != oldVal) {
+    if (value == 1) buttonPressed();
+    oldVal = value;
+  }
   delay(10);
 }

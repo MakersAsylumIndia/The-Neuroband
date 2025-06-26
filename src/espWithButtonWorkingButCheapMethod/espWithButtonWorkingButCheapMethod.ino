@@ -6,11 +6,12 @@
 
 
 // PINS
-const int LEDPin = 2;
-// Sensor should be connected SDA to A4 and SCL to A5
+const int LEDPin = 15;
+const int buttonPin = 34;
 
 // Variables
-
+//red red brown
+bool isPulsing;
 MAX30105 particleSensor;
 
 // Sensor Shit
@@ -23,6 +24,10 @@ float currentBpm;
 int avgBpm;
 
 int bpmThreshold = 80;
+
+
+int value=1;
+int oldVal=1;
 
 void setupHeartRateSensor() {
   Serial.println("Initializing...");
@@ -43,6 +48,10 @@ void setupHeartRateSensor() {
 void setup() {
   Serial.begin(115200);
 
+  pinMode(buttonPin, INPUT_PULLUP);
+  value = digitalRead(buttonPin);
+  oldVal = value;
+
   setupHeartRateSensor();
 
   pinMode(LEDPin, OUTPUT);
@@ -50,10 +59,16 @@ void setup() {
 
 
 void updateHeartRateSensor() {
-  
+  lastBeat = millis();
+  bool isBeat = false;
   long irValue = particleSensor.getIR();
-
-  bool isBeat = checkForBeat(irValue);
+  isBeat = checkForBeat(irValue);
+  while (!isBeat)
+  {
+    irValue = particleSensor.getIR();
+    isBeat = checkForBeat(irValue);
+    delay(10);
+  }
   // Serial.print("Is there a beat? ");
   // Serial.println(isBeat); 
   if (isBeat)
@@ -75,9 +90,37 @@ void updateHeartRateSensor() {
         avgBpm += rates[x];
       avgBpm /= RATE_SIZE;
     }
+    Serial.print("Current: ");
+    Serial.print(currentBpm);
+    Serial.print(" Average: ");
     Serial.println(avgBpm);
   }
 
+}
+
+void buttonPressed() {
+  Serial.println("Buttoned!");
+}
+
+void pulse(int count) {
+  if(!isPulsing){
+    isPulsing = true;
+    for(int c=0; c<count; c++){
+      for(int i=0;i<256;i++)
+      {
+        analogWrite(LEDPin, i);
+        delay(10);
+      }
+      delay(1000);
+      for(int i=255;i>=0;i--)
+      {
+        analogWrite(LEDPin, i);
+        delay(10);
+      }
+      delay(1000);
+    }
+    isPulsing = false;
+  }
 }
 
 void loop() {
@@ -85,8 +128,14 @@ void loop() {
 
   if(avgBpm > bpmThreshold)
   {
-    digitalWrite(LEDPin, HIGH);
+    pulse(1);
   }
   else digitalWrite(LEDPin, LOW);
+
+  value = digitalRead(buttonPin);
+  if (value != oldVal) {
+    if (value == 1) buttonPressed();
+    oldVal = value;
+  }
   delay(10);
 }
