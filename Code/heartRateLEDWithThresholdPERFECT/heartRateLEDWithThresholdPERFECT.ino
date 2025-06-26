@@ -8,6 +8,7 @@
 // PINS
 const int LEDPin = 15;
 const int buttonPin = 34;
+int currentVal, oldVal;
 
 // Variables
 //red red brown
@@ -25,9 +26,6 @@ int avgBpm;
 
 int bpmThreshold = 93;
 
-
-int value=1;
-int oldVal=1;
 
 void setupHeartRateSensor() {
   Serial.println("Initializing...");
@@ -49,8 +47,8 @@ void setup() {
   Serial.begin(115200);
 
   pinMode(buttonPin, INPUT_PULLUP);
-  value = digitalRead(buttonPin);
-  oldVal = value;
+  currentVal = digitalRead(buttonPin);
+  oldVal = currentVal;
 
   setupHeartRateSensor();
 
@@ -123,6 +121,15 @@ void pulse(int count) {
 }
 
 void loop() {
+  
+  currentVal = digitalRead(buttonPin);
+  if(currentVal !=  oldVal)
+  {
+    Serial.print("Button: ");
+    Serial.println(currentVal);
+    oldVal = currentVal;
+  }
+
   updateHeartRateSensor();
 
   if(avgBpm > bpmThreshold)
@@ -130,9 +137,4 @@ void loop() {
     pulse(1);
   }
 
-  value = digitalRead(buttonPin);
-  if (value != oldVal) {
-    if (value == 1) buttonPressed();
-    oldVal = value;
-  }
 }

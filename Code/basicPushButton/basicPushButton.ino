@@ -15,7 +15,7 @@ void loop() {
   currentVal = digitalRead(buttonPin);
   if(currentVal !=  oldVal)
   {
-    Serial.println("Buttoned");
+    Serial.println(currentVal);
     oldVal = currentVal;
   }
   delay(50);
