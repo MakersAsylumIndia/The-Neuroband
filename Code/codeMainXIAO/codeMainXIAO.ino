@@ -5,14 +5,16 @@
 #include "heartRate.h"
 
 
-// PINS
-const int LEDPin = D7; //15
-const int buttonPin = D10; //34
+// === Pin Definitions ===
+#define SDA_PIN D4           // SDA pin for DOIT ESP32 DEVKIT V1
+#define SCL_PIN D5           // SCL pin for DOIT ESP32 DEVKIT V1
+const int LEDPin = D10; //15
+const int buttonPin = D6; //34
 
 // Variables
-//red red brown
 bool isPulsing;
 MAX30105 particleSensor;
+
 
 // Sensor Shit
 const byte RATE_SIZE = 20; //Increase this for more averaging. 4 is good.
@@ -39,20 +41,23 @@ int numUserPanics=0;
 
 void setupHeartRateSensor() {
   Serial.println("Initializing...");
+  delay(1000);
 
-  // Initialize sensor
-  if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) //Use default I2C port, 400kHz speed
-  {
-    Serial.println("MAX30105 was not found. Please check wiring/power. ");
+  Wire.begin(SDA_PIN, SCL_PIN);
+  Wire.setClock(100000);
+
+  Serial.println("Initializing MAX30102...");
+  if (!particleSensor.begin(Wire, I2C_SPEED_STANDARD)) {
+    Serial.println("MAX30102 not found. Please check wiring.");
     while (1);
   }
+
   Serial.println("Place your index finger on the sensor with steady pressure.");
 
   particleSensor.setup(); //Configure sensor with default settings
   particleSensor.setPulseAmplitudeRed(0x0A); //Turn Red LED to low to indicate sensor is running
   particleSensor.setPulseAmplitudeGreen(0); //Turn off Green LED
 }
-
 
 void IRAM_ATTR buttonPressHandler() {
   if(millis() - lastTimePressed > buttonCoolDown) {
