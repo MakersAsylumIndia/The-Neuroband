@@ -17,7 +17,7 @@ Anxiety can strike without warning, leaving people overwhelmed, especially in pu
 
 🔹 What’s your proposed solution?
 
-The wristband offers a discreet, adaptive solution that calibrates itself to adapt to the user's unique heart rate patterns to detect early signs of anxiety. It responds instantly with haptic feedback at specific acupoints, helping the user regain control at anytime, anywhere, without drawing attention to themseleves.
+The wristband offers a discreet, adaptive solution that calibrates itself to adapt to the user's unique heart rate patterns by analysing the BPM at which they've previously triggered the device. It responds instantly with automatic haptic feedback when the user's calculated threshold is passed. Pressure is applied at specific acupoints, helping the user regain control at any time, and anywhere, without drawing attention to themseleves.
 
 Just 2–3 lines are enough. This helps others quickly understand what your project is about.
 
