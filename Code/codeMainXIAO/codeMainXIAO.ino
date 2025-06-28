@@ -8,13 +8,12 @@
 // === Pin Definitions ===
 #define SDA_PIN D4           // SDA pin for DOIT ESP32 DEVKIT V1
 #define SCL_PIN D5           // SCL pin for DOIT ESP32 DEVKIT V1
-const int LEDPin = D10; //15
-const int buttonPin = D6; //34
+const int LEDPin = D6; //15
+const int buttonPin = D10; //34
 
 // Variables
 bool isPulsing;
 MAX30105 particleSensor;
-
 
 // Sensor Shit
 const byte RATE_SIZE = 20; //Increase this for more averaging. 4 is good.
@@ -26,21 +25,66 @@ long lastBeat = 0; //Time at which the last beat occurred
 float currentBpm;
 int avgBpm;
 int bpmThreshold = 93;
+const int bpmHeadway = 5;
 
 //Button Shit
 long lastTimePressed;
-const long buttonCoolDown = 1000;
-volatile bool buttonPressed = false;
+const long buttonCoolDown = 50;
+const long longPressThreshold = 800; 
+long coolDownEndsAt;
+
+bool buttonPressed  =false; bool longPressed = false;
+bool button;
 
 
 // crash out shit
-const int panicHeapSize = 50;
-int userPanics[panicHeapSize];  // Your input array (filled elsewhere)
-int validCount = 0;   // Number of values remaining after outlier removal
-int numUserPanics=0;
+const byte panicHeapSize = 25;
+byte userPanics[panicHeapSize];  // Your input array (filled elsewhere)
+byte validCount = 0;   // Number of values remaining after outlier removal
+byte panicIterator=0;
+byte numUserPanics=0;
+
+
+float computeMean(byte data[], byte size) {
+  long sum = 0;
+  for (int i = 0; i < size; i++) {
+    sum += data[i];
+  }
+  return (float)sum / size;
+}
+
+float computeStdDev(byte data[], byte size, float mean) {
+  float variance = 0;
+  for (int i = 0; i < size; i++) {
+    variance += pow(data[i] - mean, 2);
+  }
+  return sqrt(variance / size);
+}
+
+float computeFilteredAverage(byte input[], byte size, float thresholdMultiplier = 2.0) {
+  if (size < 5) return 0;
+
+  float mean = computeMean(input, size);
+  float stddev = computeStdDev(input, size, mean);
+
+  float lower = mean - thresholdMultiplier * stddev;
+  float upper = mean + thresholdMultiplier * stddev;
+
+  long filteredSum = 0;
+  validCount = 0;
+
+  for (int i = 0; i < size; i++) {
+    if (input[i] >= lower && input[i] <= upper) {
+      filteredSum += input[i];
+      validCount++;
+    }
+  }
+
+  if (validCount == 0) return 0;
+  return (float)filteredSum / validCount;
+}
 
 void setupHeartRateSensor() {
-  Serial.println("Initializing...");
   delay(1000);
 
   Wire.begin(SDA_PIN, SCL_PIN);
@@ -59,20 +103,27 @@ void setupHeartRateSensor() {
   particleSensor.setPulseAmplitudeGreen(0); //Turn off Green LED
 }
 
-void IRAM_ATTR buttonPressHandler() {
-  if(millis() - lastTimePressed > buttonCoolDown) {
-    lastTimePressed = millis();
-    buttonPressed = true;
+
+void IRAM_ATTR buttonHandler() {
+  if(millis() > coolDownEndsAt) {
+    button = !button;
+    coolDownEndsAt = millis() + buttonCoolDown;
+    if(button){
+      lastTimePressed = millis();
+    }else {
+      long duration = millis() - lastTimePressed;
+      if(duration > longPressThreshold) longPressed=true;
+      else buttonPressed=true;
+    }
   }
 }
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("Hello");
-
   pinMode(buttonPin, INPUT_PULLUP);
   
-	attachInterrupt(buttonPin, buttonPressHandler, FALLING);
+  button = false;
+	attachInterrupt(buttonPin, buttonHandler, CHANGE);
 
   setupHeartRateSensor();
 
@@ -86,30 +137,28 @@ void updateHeartRateSensor() {
 
   while (!isBeat)
   {
+    if(buttonPressed || longPressed) return;
     irValue = particleSensor.getIR();
     isBeat = checkForBeat(irValue);
   }
-  if (isBeat)
+  long delta = millis() - lastBeat;
+  lastBeat = millis();
+
+  currentBpm = 60 / (delta / 1000.0);
+
+  if (currentBpm < 255 && currentBpm > 20)
   {
-    long delta = millis() - lastBeat;
-    lastBeat = millis();
+    rates[rateSpot++] = (byte)currentBpm; //Store this reading in the array
+    rateSpot %= RATE_SIZE; //Wrap variable
 
-    currentBpm = 60 / (delta / 1000.0);
-
-    if (currentBpm < 255 && currentBpm > 20)
-    {
-      rates[rateSpot++] = (byte)currentBpm; //Store this reading in the array
-      rateSpot %= RATE_SIZE; //Wrap variable
-
-      //Take average of readings
-      avgBpm = 0;
-      for (byte x = 0 ; x < RATE_SIZE ; x++)
-        avgBpm += rates[x];
-      avgBpm /= RATE_SIZE;
-    }
-    Serial.println(avgBpm);
+    //Take average of readings
+    avgBpm = 0;
+    for (byte x = 0 ; x < RATE_SIZE ; x++)
+      avgBpm += rates[x];
+    avgBpm /= RATE_SIZE;
   }
-
+  Serial.println(avgBpm);
+  
 }
 
 void pulse(int count) {
@@ -133,6 +182,35 @@ void pulse(int count) {
   }
 }
 
+void reevalThreshold() {
+  float avg = computeFilteredAverage(userPanics, numUserPanics);
+  if(avg==0) bpmThreshold = 93;
+  else bpmThreshold = avg; 
+  
+  Serial.print("New BPM Threshold : ");
+  Serial.println(bpmThreshold);
+}
+
+void buttonPress() {
+  if(avgBpm> 40&&avgBpm<255){
+    userPanics[panicIterator++] = (byte) avgBpm;
+    panicIterator %= panicHeapSize;
+    if(numUserPanics<panicHeapSize)numUserPanics++;
+    Serial.print("Array ");
+    for(int i=0; i<panicHeapSize; i++)
+    {
+      Serial.print(userPanics[i]);
+      Serial.print(" ");
+    }
+    Serial.println();
+
+    bpmThreshold = avgBpm - bpmHeadway;
+    Serial.print("New BPM Threshold : ");
+    Serial.println(bpmThreshold);
+  }
+  pulse(5);
+}
+
 void loop() {
   updateHeartRateSensor();
 
@@ -141,8 +219,12 @@ void loop() {
     pulse(1);
   }
   if(buttonPressed) {
-    Serial.println("Pressed");
-    pulse(5);
+    Serial.println("Normal Pressed");
+    buttonPress();
     buttonPressed = false;
+  }else if(longPressed) {
+    Serial.println("Long pressed");
+    reevalThreshold();
+    longPressed = false;
   }
 }

@@ -81,7 +81,11 @@ void updateHeartRateSensor() {
 
   while (!isBeat)
   {
+    if(buttonPressed) return;
     irValue = particleSensor.getIR();
+    if(irValue < 50000) {
+      Serial.println("No finger");
+    }
     isBeat = checkForBeat(irValue);
   }
   if (isBeat)
