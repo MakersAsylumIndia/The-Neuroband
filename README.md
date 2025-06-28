@@ -11,8 +11,10 @@ You’ll be using the **GitHub Wiki** to update all your project details in a st
 
 Start by writing a **brief introduction** to your project right here in this `README.md` file:
 
-🔹 What problem are you solving?  
+🔹 What problem are you solving? 
+Anxiety can strike without warning, leaving people overwhelmed, especially in public settings. It affects over 300 million people worldwide and we cannot afford to ignore it. Most tools don't detect rising anxiety in real time or adapt to individual stress patterns, making them unreliable at detecting when someone is truly at risk of a panic attack.
 🔹 What’s your proposed solution?
+The wristband offers a discreet, adaptive solution that calibrates itself to adapt to the user's unique heart rate patterns to detect early signs of anxiety. It responds instantly with haptic feedback at specific acupoints, helping the user regain control at anytime, anywhere, without drawing attention to themseleves.
 
 Just 2–3 lines are enough. This helps others quickly understand what your project is about.
 
