@@ -8,10 +8,10 @@
 // === Pin Definitions ===
 #define SDA_PIN D4           // SDA pin for DOIT ESP32 DEVKIT V1
 #define SCL_PIN D5           // SCL pin for DOIT ESP32 DEVKIT V1
-const int LEDPin = D6; //15
-const int buttonPin = D10; //34
+const int LEDPin = D8; //15
+const int buttonPin = D6; //34
 
-// Variables
+// Variablesa
 bool isPulsing;
 MAX30105 particleSensor;
 
@@ -21,10 +21,12 @@ byte rates[RATE_SIZE]; //Array of heart rates
 byte rateSpot = 0;
 long lastBeat = 0; //Time at which the last beat occurred
 
+const int RESET_THRESHOLD = 93;
+
 // Sensor Reading STuff
 float currentBpm;
 int avgBpm;
-int bpmThreshold = 93;
+int bpmThreshold = RESET_THRESHOLD;
 const int bpmHeadway = 5;
 
 //Button Shit
@@ -184,7 +186,7 @@ void pulse(int count) {
 
 void reevalThreshold() {
   float avg = computeFilteredAverage(userPanics, numUserPanics);
-  if(avg==0) bpmThreshold = 93;
+  if(avg==0) bpmThreshold = RESET_THRESHOLD;
   else bpmThreshold = avg; 
   
   Serial.print("New BPM Threshold : ");
